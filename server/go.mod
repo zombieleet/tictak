@@ -1,6 +1,6 @@
 module github.com/zombieleet/tictak/server
 
-go 1.19
+go 1.20
 
 require github.com/rivo/tview v0.0.0-20230226195229-47e7db7885b4
 

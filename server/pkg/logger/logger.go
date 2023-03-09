@@ -55,6 +55,14 @@ func NewLogger(loggerOptions LoggerOptions) *Logger {
 	}
 }
 
-func (logger *Logger) Log(args string) {
-	logger.slogger.Info(args)
+func (logger *Logger) Log(msg string) {
+	logger.slogger.Info(msg)
+}
+
+func (logger *Logger) GetGroup(group string) *slog.Logger {
+	return logger.slogger.WithGroup(group)
+}
+
+func (logger *Logger) NetworkError(err error) {
+	logger.slogger.WithGroup("NETWORK_ERROR").Error("Error:", err)
 }
