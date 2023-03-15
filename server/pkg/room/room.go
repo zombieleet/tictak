@@ -1,3 +1,4 @@
+// room package contains methods and types needed for hanlding room related operations
 package room
 
 import (
@@ -5,6 +6,8 @@ import (
 	"github.com/zombieleet/tictak/server/pkg/players"
 )
 
+// RoomInfo
+// Holds information about a room
 type RoomInfo struct {
 	// boolean to indicate a room that is not yet filled
 	Occupied              bool
@@ -13,11 +16,20 @@ type RoomInfo struct {
 	// by default it is set to public
 	Visibility string
 	Name       string
-	players    *players.Players
+
+	// raw grid of the game
+	Grid [][]string
+
+	// players added to a room (max is 2)
+	players *players.Players
 }
 
+// Room
+// Holds a relationship between a rooms id and the rooms info
 type Room map[uint8]*RoomInfo
 
+// CreateRooms
+// create rooms with a max roomCount of 10
 func CreateRooms(roomCount uint8) *Room {
 	rooms := make(Room)
 

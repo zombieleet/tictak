@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"context"
 	"golang.org/x/exp/slog"
 	"io"
 	"os"
@@ -59,8 +60,8 @@ func (logger *Logger) Log(msg string) {
 	logger.slogger.Info(msg)
 }
 
-func (logger *Logger) GetGroup(group string) *slog.Logger {
-	return logger.slogger.WithGroup(group)
+func (logger *Logger) LogWithCtx(ctx context.Context, msg string, group string, kv []any) {
+	logger.slogger.WithGroup(group).InfoCtx(ctx, msg, kv...)
 }
 
 func (logger *Logger) NetworkError(err error) {

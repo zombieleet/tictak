@@ -3,24 +3,35 @@ package message
 import (
 	"context"
 	"fmt"
+	"github.com/zombieleet/tictak/server/pkg/commands"
 	"github.com/zombieleet/tictak/server/pkg/logger"
 	"github.com/zombieleet/tictak/server/pkg/room"
 	"net"
 	"strings"
 )
 
+type Command string
+
+const (
+	CMD_SEND_ROOMS Command = "SEND_ROOMS"
+)
+
 type unicast struct {
 	logger *logger.Logger
 }
 
+// SendRooms
+// Sends the list of rooms and their avaialability information to
+// a client
 func (ucast *unicast) SendRooms(conn net.Conn, rooms *room.Room) {
 
 	var payload strings.Builder
 
 	for roomId, roomInfo := range *rooms {
-		payload.WriteString(fmt.Sprintf("%d. %s (Occupied=%t)\n", roomId, roomInfo.Name, roomInfo.Occupied))
+		payload.WriteString(fmt.Sprintf("%d. %s (Occupied=%t)_", roomId, roomInfo.Name, roomInfo.Occupied))
 	}
 
+	connAddress := conn.RemoteAddr().String()
 	parentCtx := context.Background()
 
 	valueCtx := context.WithValue(
@@ -28,20 +39,28 @@ func (ucast *unicast) SendRooms(conn net.Conn, rooms *room.Room) {
 		"SEND_ROOMS",
 		encodeContext(messageContext{
 			Type:         "SEND_ROOMS",
-			ContextValue: conn.RemoteAddr().String(),
+			ContextValue: connAddress,
 		}),
 	)
 
-	logger := ucast.logger.GetGroup("ROOMS")
+	ucast.logger.LogWithCtx(
+		valueCtx,
+		"sending rooms payload",
+		"ROOMS",
+		[]any{"address", connAddress},
+	)
 
-	logger.InfoCtx(valueCtx, "sending rooms payload")
-
-	_, error := conn.Write([]byte(payload.String()))
+	_, error := conn.Write([]byte(commands.Commands["CMD_SEND_ROOMS"] + payload.String() + "\n"))
 
 	if error != nil {
 		ucast.logger.NetworkError(error)
 		return
 	}
 
-	logger.InfoCtx(valueCtx, "finish sending rooms payload")
+	ucast.logger.LogWithCtx(
+		valueCtx,
+		"finish sending rooms payload",
+		"ROOMS",
+		[]any{"address", connAddress},
+	)
 }
