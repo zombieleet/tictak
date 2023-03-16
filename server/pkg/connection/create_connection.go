@@ -7,6 +7,7 @@ import (
 	"github.com/zombieleet/tictak/server/pkg/message"
 	"github.com/zombieleet/tictak/server/pkg/players"
 	"github.com/zombieleet/tictak/server/pkg/room"
+	"io"
 	"net"
 )
 
@@ -67,13 +68,21 @@ func (gameServer *GameServer) Start() {
 		}
 
 		go func() {
-
+			c := make([]byte, 1000)
 			gameServer.logger.Log(fmt.Sprintf("%+v", newUserConnection))
 			gameServer.logger.Log(fmt.Sprintf("%+v", gameServer.rooms))
 
 			gameServer.playersConnected.AddPlayer(newUserConnection.RemoteAddr().String())
 
 			gameServer.message.Unicast.SendRooms(newUserConnection, gameServer.rooms)
+
+			for {
+				n, err := newUserConnection.Read(c)
+				fmt.Println("-count- ", n, "-err- ", err, "-data- ", string(c))
+				if errors.Is(err, io.EOF) {
+					break
+				}
+			}
 
 		}()
 	}
