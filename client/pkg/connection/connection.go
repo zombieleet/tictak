@@ -23,7 +23,7 @@ type GameClient struct {
 
 	ctx         context.Context
 	cancelCause context.CancelCauseFunc
-	commsChan   chan any
+	commsChan   chan string
 }
 
 // CreageGameClient
@@ -45,7 +45,7 @@ func CreateGameClient(gameClientOptions GameClientOptions) (*GameClient, error) 
 	}
 
 	ctx, cancelCtxCause := context.WithCancelCause(context.Background())
-	commsChan := make(chan any)
+	commsChan := make(chan string)
 
 	return &GameClient{
 		dialer:      tcpDialer,
@@ -74,7 +74,7 @@ func (gameClient *GameClient) Connect() {
 
 		command, payload := gameClient.message.ProcessMessage(data)
 
-		gameClient.handler.HandleUICommand(command, payload)
+		go gameClient.handler.HandleUICommand(command, payload)
 
 		select {
 		case <-gameClient.ctx.Done():
@@ -82,6 +82,8 @@ func (gameClient *GameClient) Connect() {
 				panic(context.Cause(gameClient.ctx))
 			}
 			return
+		case payload := <-gameClient.commsChan:
+			gameClient.dialer.Write([]byte(payload))
 		}
 	}
 }

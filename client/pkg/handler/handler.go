@@ -7,18 +7,30 @@ import (
 	"github.com/zombieleet/tictak/client/pkg/ui"
 )
 
+// Handler struct holds private and public fields needed for the handler package
+// the handler package delegates operations to the UI
 type Handler struct {
-	Handlers       map[string]func(context.Context, string)
-	ui             *ui.UI
+	// relationship between server commands and handler functions
+	Handlers map[string]func(chan string, context.Context, string)
+	ui       *ui.UI
+
+	// context for closing the connection when an error that cannot
+	// be recovered from occurs
 	ctx            context.Context
 	cancelCtxCause context.CancelCauseFunc
+
+	// channel for communicating between the connection package and the ui package
+	// handler package passes the channel to to methods in the UI package
+	commsChan chan string
 }
 
-func InitHandlers(ctx context.Context, cancelCtxCause context.CancelCauseFunc, commsChan chan any) *Handler {
+// InitHandlers maps the server command with ui handlers
+func InitHandlers(ctx context.Context, cancelCtxCause context.CancelCauseFunc, commsChan chan string) *Handler {
 	handler := &Handler{
-		Handlers:       make(map[string]func(context.Context, string)),
+		Handlers:       make(map[string]func(chan string, context.Context, string)),
 		ui:             ui.CreateUI(cancelCtxCause),
 		ctx:            ctx,
+		commsChan:      commsChan,
 		cancelCtxCause: cancelCtxCause,
 	}
 
@@ -28,8 +40,8 @@ func InitHandlers(ctx context.Context, cancelCtxCause context.CancelCauseFunc, c
 	return handler
 }
 
-// CreateUI
-// This responsible for dynamically invoking the UI functionality
+// CreateUI dynamically invokes UI updates/creation/deletion
+// it works with the `Handler.Handlers` map
 func (handler *Handler) HandleUICommand(command string, payload string) {
 
 	handlerFunc, ok := handler.Handlers[command]
@@ -39,9 +51,9 @@ func (handler *Handler) HandleUICommand(command string, payload string) {
 		return
 	}
 
-	handlerFunc(handler.ctx, payload)
+	handlerFunc(handler.commsChan, handler.ctx, payload)
 
-	if err := handler.ui.App.SetRoot(handler.ui.Layout, true).EnableMouse(true).Run(); err != nil {
+	if err := handler.ui.App.SetRoot(handler.ui.MainLayout, true).EnableMouse(true).Run(); err != nil {
 		handler.cancelCtxCause(errors.Join(gclienterror.UI_STARTUP_ERROR, err))
 		return
 	}
