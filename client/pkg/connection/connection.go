@@ -48,9 +48,12 @@ func CreateGameClient(gameClientOptions GameClientOptions) (*GameClient, error) 
 	commsChan := make(chan string)
 
 	return &GameClient{
-		dialer:      tcpDialer,
-		message:     message.InitMessage(),
-		handler:     handler.InitHandlers(ctx, cancelCtxCause, commsChan),
+		dialer:  tcpDialer,
+		message: message.InitMessage(),
+		handler: handler.InitHandlers(handler.HandlerOption{
+			CancelCtxCauseFunc: cancelCtxCause,
+			CommsChan:          commsChan,
+		}),
 		ctx:         ctx,
 		cancelCause: cancelCtxCause,
 		commsChan:   commsChan,
@@ -78,8 +81,9 @@ func (gameClient *GameClient) Connect() {
 
 		select {
 		case <-gameClient.ctx.Done():
-			if err := gameClient.ctx.Err(); err != nil && !errors.Is(err, context.Canceled) {
-				panic(context.Cause(gameClient.ctx))
+			errorCause := context.Cause(gameclient.Ctx)
+			if err := errorCause; err != nil && !errors.Is(err, context.Canceled) {
+				panic(errorCause)
 			}
 			return
 		case payload := <-gameClient.commsChan:

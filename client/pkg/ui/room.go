@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"context"
 	"fmt"
 	"github.com/rivo/tview"
 	"github.com/zombieleet/tictak/client/pkg/commands"
@@ -18,7 +17,7 @@ func InitRoomsUI(ui *UI) *Room {
 
 // CreateRoomListUI creates the ui for room list
 // the room list ui is appended to ContentLayout on row 0 and column 0
-func (room *Room) CreateRoomListUI(commsChan chan string, ctx context.Context, data string) {
+func (room *Room) CreateRoomListUI(commsChan chan string, data string) {
 	rooms := strings.Split(data, "\n")
 	listUI := room.ui.createList()
 	for key, roomValue := range rooms {
@@ -36,7 +35,7 @@ func (room *Room) CreateRoomListUI(commsChan chan string, ctx context.Context, d
 	room.ui.ContentLayout.AddItem(roomsGrid, 0, 0, 2, 1, 0, 0, true)
 }
 
-func (room *Room) UpdateRoomListUI(_ chan string, _ context.Context, _ string) {}
+func (room *Room) UpdateRoomListUI(_ chan string, _ string) {}
 
 func (room *Room) createRoomGrid() *tview.Grid {
 	return room.ui.createGrid([]int{1}).SetColumns(0)

@@ -11,7 +11,7 @@ import (
 // the handler package delegates operations to the UI
 type Handler struct {
 	// relationship between server commands and handler functions
-	handlers map[string]func(chan string, context.Context, string)
+	handlers map[string]func(chan string, string)
 	ui       *ui.UI
 
 	// context for closing the connection when an error that cannot
@@ -24,14 +24,18 @@ type Handler struct {
 	commsChan chan string
 }
 
+type HandlerOption struct {
+	CancelCtxCauseFunc context.CancelCauseFunc
+	CommsChan          chan string
+}
+
 // InitHandlers maps the server command with ui handlers
-func InitHandlers(ctx context.Context, cancelCtxCause context.CancelCauseFunc, commsChan chan string) *Handler {
+func InitHandlers(handlerOption HandlerOption) *Handler {
 	handler := &Handler{
-		handlers:       make(map[string]func(chan string, context.Context, string)),
-		ui:             ui.CreateUI(cancelCtxCause),
-		ctx:            ctx,
-		commsChan:      commsChan,
-		cancelCtxCause: cancelCtxCause,
+		handlers:       make(map[string]func(chan string, string)),
+		ui:             ui.CreateUI(handlerOption.CancelCtxCauseFunc),
+		commsChan:      handlerOption.CommsChan,
+		cancelCtxCause: handlerOption.CancelCtxCauseFunc,
 	}
 
 	handler.handlers["CMD_SEND_ROOMS"] = handler.ui.Room.CreateRoomListUI
@@ -51,7 +55,7 @@ func (handler *Handler) HandleUICommand(command string, payload string) {
 		return
 	}
 
-	handlerFunc(handler.commsChan, handler.ctx, payload)
+	handlerFunc(handler.commsChan, payload)
 
 	if err := handler.ui.App.SetRoot(handler.ui.MainLayout, true).EnableMouse(true).Run(); err != nil {
 		handler.cancelCtxCause(errors.Join(gclienterror.UI_STARTUP_ERROR, err))
