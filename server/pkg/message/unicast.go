@@ -23,7 +23,7 @@ type unicast struct {
 // SendRooms
 // Sends the list of rooms and their avaialability information to
 // a client
-func (ucast *unicast) SendRooms(conn net.Conn, rooms *room.Room) {
+func (ucast *unicast) SendRooms(conn net.Conn, rooms *room.RoomMap) {
 
 	var payload strings.Builder
 

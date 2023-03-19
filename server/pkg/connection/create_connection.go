@@ -3,6 +3,7 @@ package connection
 import (
 	"errors"
 	"fmt"
+	"github.com/zombieleet/tictak/server/pkg/handlers"
 	"github.com/zombieleet/tictak/server/pkg/logger"
 	"github.com/zombieleet/tictak/server/pkg/message"
 	"github.com/zombieleet/tictak/server/pkg/players"
@@ -20,9 +21,10 @@ type GameServerOptions struct {
 type GameServer struct {
 	listener         *net.TCPListener
 	logger           *logger.Logger
-	rooms            *room.Room
+	rooms            *room.RoomMap
 	playersConnected *players.PlayersConnected
 	message          *message.Message
+	handlers         *handlers.Handler
 }
 
 // CreateGameServer
@@ -47,12 +49,15 @@ func CreateGameServer(gameServerOptions GameServerOptions) *GameServer {
 
 	gameServerOptions.Logger.Log(tcpAddress.String())
 
+	room := room.CreateRooms(2)
+
 	return &GameServer{
 		listener:         tcpListener,
 		logger:           gameServerOptions.Logger,
-		rooms:            room.CreateRooms(2),
 		playersConnected: players.CreateConnectedPlayers(),
+		rooms:            room.Rooms,
 		message:          message.InitMessage(message.MessageOptions{gameServerOptions.Logger}),
+		handlers:         handlers.InitHandlers(handlers.HandlerOption{*room}),
 	}
 }
 
@@ -69,19 +74,27 @@ func (gameServer *GameServer) Start() {
 
 		go func() {
 			c := make([]byte, 1000)
+
 			gameServer.logger.Log(fmt.Sprintf("%+v", newUserConnection))
-			gameServer.logger.Log(fmt.Sprintf("%+v", gameServer.rooms))
 
 			gameServer.playersConnected.AddPlayer(newUserConnection.RemoteAddr().String())
-
 			gameServer.message.Unicast.SendRooms(newUserConnection, gameServer.rooms)
 
+			clientAddress := newUserConnection.RemoteAddr().String()
+
 			for {
-				n, err := newUserConnection.Read(c)
-				fmt.Println("-count- ", n, "-err- ", err, "-data- ", string(c))
+
+				readCount, err := newUserConnection.Read(c)
+
 				if errors.Is(err, io.EOF) {
 					break
 				}
+
+				command, payload := gameServer.message.ProcessMessage(string(c[:readCount]))
+
+				gameServer.logger.Log(fmt.Sprintf("Handling command (%s) from address (%s)", command, clientAddress))
+
+				go gameServer.handlers.HandleCommand(command, payload, clientAddress)
 			}
 
 		}()

@@ -6,7 +6,7 @@ import (
 
 type Message struct{}
 
-func NewMessage() *Message {
+func InitMessage() *Message {
 	return &Message{}
 }
 

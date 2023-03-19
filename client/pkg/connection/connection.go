@@ -49,7 +49,7 @@ func CreateGameClient(gameClientOptions GameClientOptions) (*GameClient, error) 
 
 	return &GameClient{
 		dialer:      tcpDialer,
-		message:     message.NewMessage(),
+		message:     message.InitMessage(),
 		handler:     handler.InitHandlers(ctx, cancelCtxCause, commsChan),
 		ctx:         ctx,
 		cancelCause: cancelCtxCause,
@@ -83,7 +83,7 @@ func (gameClient *GameClient) Connect() {
 			}
 			return
 		case payload := <-gameClient.commsChan:
-			gameClient.dialer.Write([]byte(payload))
+			gameClient.dialer.Write([]byte(payload + "\n"))
 		}
 	}
 }

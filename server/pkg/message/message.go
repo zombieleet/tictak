@@ -2,6 +2,7 @@ package message
 
 import (
 	"encoding/json"
+	"github.com/zombieleet/tictak/client/pkg/message"
 	"github.com/zombieleet/tictak/server/pkg/logger"
 )
 
@@ -17,6 +18,7 @@ type messageContext struct {
 type Message struct {
 	Broadcast *broadcast
 	Unicast   *unicast
+	m         *message.Message
 }
 
 type MessageOptions struct {
@@ -27,7 +29,12 @@ func InitMessage(messageOptions MessageOptions) *Message {
 	return &Message{
 		Broadcast: &broadcast{messageOptions.Logger},
 		Unicast:   &unicast{messageOptions.Logger},
+		m:         message.InitMessage(),
 	}
+}
+
+func (msg *Message) ProcessMessage(data string) (string, string) {
+	return msg.m.ProcessMessage(data)
 }
 
 func encodeContext(mContext messageContext) string {

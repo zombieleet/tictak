@@ -4,15 +4,15 @@ import (
 	"sync"
 )
 
-type playerInfo struct {
+type PlayerInfo struct {
 	Address      string
 	Name         string
-	CurrentStore uint8
+	CurrentScore uint8
 }
 
 type Players struct {
-	PlayerOne playerInfo
-	PlayerTwo playerInfo
+	PlayerOne *PlayerInfo
+	PlayerTwo *PlayerInfo
 }
 
 // PlayersConnected

@@ -11,7 +11,7 @@ import (
 // the handler package delegates operations to the UI
 type Handler struct {
 	// relationship between server commands and handler functions
-	Handlers map[string]func(chan string, context.Context, string)
+	handlers map[string]func(chan string, context.Context, string)
 	ui       *ui.UI
 
 	// context for closing the connection when an error that cannot
@@ -27,15 +27,15 @@ type Handler struct {
 // InitHandlers maps the server command with ui handlers
 func InitHandlers(ctx context.Context, cancelCtxCause context.CancelCauseFunc, commsChan chan string) *Handler {
 	handler := &Handler{
-		Handlers:       make(map[string]func(chan string, context.Context, string)),
+		handlers:       make(map[string]func(chan string, context.Context, string)),
 		ui:             ui.CreateUI(cancelCtxCause),
 		ctx:            ctx,
 		commsChan:      commsChan,
 		cancelCtxCause: cancelCtxCause,
 	}
 
-	handler.Handlers["CMD_SEND_ROOMS"] = handler.ui.Room.CreateRoomListUI
-	handler.Handlers["CMD_UPDATE_ROOMS"] = handler.ui.Room.UpdateRoomListUI
+	handler.handlers["CMD_SEND_ROOMS"] = handler.ui.Room.CreateRoomListUI
+	handler.handlers["CMD_UPDATE_ROOMS"] = handler.ui.Room.UpdateRoomListUI
 
 	return handler
 }
@@ -44,7 +44,7 @@ func InitHandlers(ctx context.Context, cancelCtxCause context.CancelCauseFunc, c
 // it works with the `Handler.Handlers` map
 func (handler *Handler) HandleUICommand(command string, payload string) {
 
-	handlerFunc, ok := handler.Handlers[command]
+	handlerFunc, ok := handler.handlers[command]
 
 	if !ok {
 		handler.cancelCtxCause(errors.Join(gclienterror.HANDLER_FUNC_ERROR, errors.New("cannot find handler command: "+command)))

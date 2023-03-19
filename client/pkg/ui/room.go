@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/rivo/tview"
 	"github.com/zombieleet/tictak/client/pkg/commands"
-	"strconv"
 	"strings"
 )
 
@@ -23,12 +22,12 @@ func (room *Room) CreateRoomListUI(commsChan chan string, ctx context.Context, d
 	rooms := strings.Split(data, "\n")
 	listUI := room.ui.createList()
 	for key, roomValue := range rooms {
-		roomId := []rune(strconv.Itoa(key + 1))[0]
-		listUI.AddItem(roomValue, "", roomId, func(r string) func() {
+		roomId := rune(key + 1)
+		listUI.AddItem(roomValue, "", roomId, func(r string, id rune) func() {
 			return func() {
-				commsChan <- fmt.Sprintf("%s %d", commands.Commands["CMD_ENTER_ROOM"], roomId)
+				commsChan <- fmt.Sprintf("%s%d_", commands.Commands["CMD_ENTER_ROOM"], roomId)
 			}
-		}(roomValue))
+		}(roomValue, roomId))
 	}
 
 	roomsGrid := room.createRoomGrid()
