@@ -2,6 +2,8 @@
 package room
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"github.com/zombieleet/tictak/server/pkg/players"
 	"strconv"
@@ -20,7 +22,9 @@ type RoomInfo struct {
 	Name       string
 
 	// raw grid of the game
-	Grid [][]string
+	grid [][]string
+
+	GridSize uint8
 
 	// players added to a room (max is 2)
 	players *players.Players
@@ -33,6 +37,18 @@ type RoomMap map[uint8]*RoomInfo
 type Room struct {
 	Rooms *RoomMap
 	mutex *sync.Mutex
+}
+
+// createGrid creates an x by x grid
+func createGrid(size uint8) [][]string {
+	grid := make([][]string, size)
+	for row := uint8(0); row < size; row += 1 {
+		grid[row] = make([]string, size)
+		for col := uint8(0); col < size; col += 1 {
+			grid[row][col] = "-"
+		}
+	}
+	return grid
 }
 
 // CreateRooms
@@ -49,10 +65,11 @@ func CreateRooms(roomCount uint8) *Room {
 	}
 
 	for roomIndex := uint8(1); roomIndex <= roomCount; roomIndex += 1 {
-
 		(*room.Rooms)[roomIndex] = &RoomInfo{
 			Occupied:              false,
 			NumberOfPlayersInRoom: 0,
+			grid:                  createGrid(3),
+			GridSize:              3,
 			Visibility:            "PUBLIC",
 			players:               new(players.Players),
 			Name:                  fmt.Sprintf("%s %d", "Room", roomIndex),
@@ -63,16 +80,15 @@ func CreateRooms(roomCount uint8) *Room {
 }
 
 // EnterRoom registers a user in a room
-func (r *Room) EnterRoom(args ...interface{}) {
+func (r *Room) EnterRoom(commsChan chan string, cancelCtxFunc context.CancelCauseFunc, args ...interface{}) {
 
 	rawRoomId := args[0].(string)
 	address := args[1].(string)
 
 	conv, err := strconv.Atoi(rawRoomId)
 
-	// TODO: send error report back to client
-	// revert to room list ui
 	if err != nil {
+		cancelCtxFunc(errors.Join(E_ROOM_ID_CONVERSION_ERROR, err, fmt.Errorf("roomid(%s)", rawRoomId)))
 		return
 	}
 
@@ -91,16 +107,17 @@ func (r *Room) EnterRoom(args ...interface{}) {
 		}
 		room.Occupied = true
 		room.NumberOfPlayersInRoom = 2
-		return
+	} else {
+		room.players = &players.Players{
+			PlayerOne: &players.PlayerInfo{
+				Address:      address,
+				Name:         "",
+				CurrentScore: 0,
+			},
+		}
+		room.NumberOfPlayersInRoom = 1
 	}
 
-	room.players = &players.Players{
-		PlayerOne: &players.PlayerInfo{
-			Address:      address,
-			Name:         "",
-			CurrentScore: 0,
-		},
-	}
 	fmt.Printf("%+v", room.players)
 	// broadcast an update to all players connected in the list of room
 	// check the playerconnected struct

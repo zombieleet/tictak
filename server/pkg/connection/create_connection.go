@@ -1,6 +1,7 @@
 package connection
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/zombieleet/tictak/server/pkg/handlers"
@@ -25,6 +26,9 @@ type GameServer struct {
 	playersConnected *players.PlayersConnected
 	message          *message.Message
 	handlers         *handlers.Handler
+	ctx              context.Context
+	cancleFunc       context.CancelCauseFunc
+	commsChan        chan string
 }
 
 // CreateGameServer
@@ -50,6 +54,9 @@ func CreateGameServer(gameServerOptions GameServerOptions) *GameServer {
 	gameServerOptions.Logger.Log(tcpAddress.String())
 
 	room := room.CreateRooms(2)
+	commsChan := make(chan string)
+
+	cancelCtx, cancelFunc := context.WithCancelCause(context.Background())
 
 	return &GameServer{
 		listener:         tcpListener,
@@ -57,7 +64,14 @@ func CreateGameServer(gameServerOptions GameServerOptions) *GameServer {
 		playersConnected: players.CreateConnectedPlayers(),
 		rooms:            room.Rooms,
 		message:          message.InitMessage(message.MessageOptions{gameServerOptions.Logger}),
-		handlers:         handlers.InitHandlers(handlers.HandlerOption{*room}),
+		handlers: handlers.InitHandlers(handlers.HandlerOption{
+			Room:          *room,
+			CancelCtxFunc: cancelFunc,
+			CommsChan:     commsChan,
+		}),
+		ctx:        cancelCtx,
+		cancleFunc: cancelFunc,
+		commsChan:  commsChan,
 	}
 }
 
@@ -94,7 +108,20 @@ func (gameServer *GameServer) Start() {
 
 				gameServer.logger.Log(fmt.Sprintf("Handling command (%s) from address (%s)", command, clientAddress))
 
-				go gameServer.handlers.HandleCommand(command, payload, clientAddress)
+				go gameServer.handlers.HandleCommand(
+					command,
+					payload,
+					clientAddress,
+				)
+
+				select {
+				case <-gameServer.ctx.Done():
+					errorCause := context.Cause(gameServer.ctx)
+					if err := errorCause; err != nil && !errors.Is(err, context.Canceled) {
+						gameServer.logger.LogWithCtx(gameServer.ctx, errorCause.Error(), clientAddress, []any{command, clientAddress})
+					}
+				}
+
 			}
 
 		}()

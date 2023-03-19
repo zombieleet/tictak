@@ -1,23 +1,32 @@
 package handlers
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"github.com/zombieleet/tictak/server/pkg/room"
 )
 
-type HandlersMap map[string]func(...interface{})
+type HandlersMap map[string]func(chan string, context.CancelCauseFunc, ...interface{})
 
 type Handler struct {
-	handlers HandlersMap
+	handlers      HandlersMap
+	cancelCtxFunc context.CancelCauseFunc
+	commsChan     chan string
 }
 
 type HandlerOption struct {
-	Room room.Room
+	Room          room.Room
+	CancelCtxFunc context.CancelCauseFunc
+	CommsChan     chan string
 }
 
 func InitHandlers(handlerOption HandlerOption) *Handler {
 
 	handler := &Handler{
-		handlers: make(HandlersMap),
+		handlers:      make(HandlersMap),
+		cancelCtxFunc: handlerOption.CancelCtxFunc,
+		commsChan:     handlerOption.CommsChan,
 	}
 
 	handler.handlers["CMD_ENTER_ROOM"] = handlerOption.Room.EnterRoom
@@ -27,11 +36,10 @@ func InitHandlers(handlerOption HandlerOption) *Handler {
 func (handler *Handler) HandleCommand(command, payload, address string) {
 	handlerFunc, ok := handler.handlers[command]
 
-	// TODO: log error and return
-	// send client an error
 	if !ok {
+		handler.cancelCtxFunc(errors.Join(E_HANDLER_NO_EXIST, fmt.Errorf("for command %s", command)))
 		return
 	}
 
-	handlerFunc(payload, address)
+	handlerFunc(handler.commsChan, handler.cancelCtxFunc, payload, address)
 }
