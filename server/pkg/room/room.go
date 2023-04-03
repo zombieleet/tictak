@@ -5,7 +5,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/zombieleet/tictak/server/pkg/message"
 	"github.com/zombieleet/tictak/server/pkg/players"
+	"net"
 	"strconv"
 	"sync"
 )
@@ -14,20 +16,20 @@ import (
 // Holds information about a room
 type RoomInfo struct {
 	// boolean to indicate a room that is not yet filled
-	Occupied              bool
-	NumberOfPlayersInRoom uint8
+	Occupied              bool  `json:"occupied"`
+	NumberOfPlayersInRoom uint8 `json:"num_players_in_room"`
 	// can be public or private
 	// by default it is set to public
-	Visibility string
-	Name       string
+	Visibility string `json:"visibility"`
+	Name       string `json:"room_name"`
 
 	// raw grid of the game
 	grid [][]string
 
-	GridSize uint8
+	GridSize uint8 `json:"grid_size"`
 
 	// players added to a room (max is 2)
-	players *players.Players
+	Players *players.Players `json:"players_in_room"`
 }
 
 type RoomMap map[uint8]*RoomInfo
@@ -35,8 +37,9 @@ type RoomMap map[uint8]*RoomInfo
 // Room
 // Holds a relationship between a rooms id and the rooms info
 type Room struct {
-	Rooms *RoomMap
-	mutex *sync.Mutex
+	Rooms   *RoomMap
+	mutex   *sync.Mutex
+	message *message.Message
 }
 
 // createGrid creates an x by x grid
@@ -53,11 +56,12 @@ func createGrid(size uint8) [][]string {
 
 // CreateRooms
 // create rooms with a max roomCount of 10
-func CreateRooms(roomCount uint8) *Room {
+func CreateRooms(roomCount uint8, message *message.Message) *Room {
 	rooms := make(RoomMap)
 	room := &Room{
-		Rooms: &rooms,
-		mutex: new(sync.Mutex),
+		Rooms:   &rooms,
+		mutex:   new(sync.Mutex),
+		message: message,
 	}
 
 	if roomCount > 10 || roomCount < 1 {
@@ -71,7 +75,7 @@ func CreateRooms(roomCount uint8) *Room {
 			grid:                  createGrid(3),
 			GridSize:              3,
 			Visibility:            "PUBLIC",
-			players:               new(players.Players),
+			Players:               new(players.Players),
 			Name:                  fmt.Sprintf("%s %d", "Room", roomIndex),
 		}
 	}
@@ -80,7 +84,12 @@ func CreateRooms(roomCount uint8) *Room {
 }
 
 // EnterRoom registers a user in a room
-func (r *Room) EnterRoom(commsChan chan string, cancelCtxFunc context.CancelCauseFunc, args ...interface{}) {
+func (r *Room) EnterRoom(
+	_ net.Conn,
+	commsChan chan any,
+	cancelCtxFunc context.CancelCauseFunc,
+	args ...interface{},
+) {
 
 	rawRoomId := args[0].(string)
 	address := args[1].(string)
@@ -100,15 +109,18 @@ func (r *Room) EnterRoom(commsChan chan string, cancelCtxFunc context.CancelCaus
 	room := (*r.Rooms)[roomId]
 
 	if room.NumberOfPlayersInRoom == 1 {
-		room.players.PlayerTwo = &players.PlayerInfo{
+		room.Players.PlayerTwo = &players.PlayerInfo{
 			Address:      address,
 			Name:         "",
 			CurrentScore: 0,
 		}
 		room.Occupied = true
 		room.NumberOfPlayersInRoom = 2
+
+		r.message.Unicast.SendPlayerOneConnectedInfoFromPlayerOne()
+
 	} else {
-		room.players = &players.Players{
+		room.Players = &players.Players{
 			PlayerOne: &players.PlayerInfo{
 				Address:      address,
 				Name:         "",
@@ -118,7 +130,10 @@ func (r *Room) EnterRoom(commsChan chan string, cancelCtxFunc context.CancelCaus
 		room.NumberOfPlayersInRoom = 1
 	}
 
-	fmt.Printf("%+v", room.players)
+	//commsChan <- *room
+	r.message.Broadcast.SendPlayerCountToConnectedPlayers()
+	//r.message.Broadcast.SendPlayerCountToConnectedPlayers(r.message.Broadcast, room.NumberOfPlayersInRoom)
+
 	// broadcast an update to all players connected in the list of room
 	// check the playerconnected struct
 }

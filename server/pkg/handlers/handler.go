@@ -5,9 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/zombieleet/tictak/server/pkg/room"
+	"net"
 )
 
-type HandlersMap map[string]func(chan string, context.CancelCauseFunc, ...interface{})
+type HandlersMap map[string]func(net.Conn, chan string, context.CancelCauseFunc, ...interface{})
 
 type Handler struct {
 	handlers      HandlersMap
@@ -33,7 +34,7 @@ func InitHandlers(handlerOption HandlerOption) *Handler {
 	return handler
 }
 
-func (handler *Handler) HandleCommand(command, payload, address string) {
+func (handler *Handler) HandleCommand(command, payload, address string, conn net.Conn) {
 	handlerFunc, ok := handler.handlers[command]
 
 	if !ok {
@@ -41,5 +42,5 @@ func (handler *Handler) HandleCommand(command, payload, address string) {
 		return
 	}
 
-	handlerFunc(handler.commsChan, handler.cancelCtxFunc, payload, address)
+	handlerFunc(conn, handler.commsChan, handler.cancelCtxFunc, payload, address)
 }

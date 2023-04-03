@@ -1,18 +1,25 @@
 package players
 
 import (
+	"net"
 	"sync"
 )
 
 type PlayerInfo struct {
-	Address      string
-	Name         string
-	CurrentScore uint8
+	Address      string `json:"addres"`
+	Name         string `json:"name"`
+	CurrentScore uint8  `json:"player_score"`
+	Connection   net.Conn
 }
 
 type Players struct {
-	PlayerOne *PlayerInfo
-	PlayerTwo *PlayerInfo
+	PlayerOne *PlayerInfo `json:"player_one"`
+	PlayerTwo *PlayerInfo `json:"player_two"`
+}
+
+type PlayerConnectedConnection struct {
+	Address    string
+	Connection net.Conn
 }
 
 // PlayersConnected
@@ -20,22 +27,25 @@ type Players struct {
 // representing connected players
 type PlayersConnected struct {
 	// list of connected players (network address)
-	players []string
+	Players []PlayerConnectedConnection
 	mutex   sync.RWMutex
 }
 
 func CreateConnectedPlayers() *PlayersConnected {
 	return &PlayersConnected{
-		players: make([]string, 1),
+		Players: make([]PlayerConnectedConnection, 1),
 	}
 }
 
 // AddPlayer
-// Adds a player to the list of players is connected to the server
-func (pNoRoom *PlayersConnected) AddPlayer(address string) {
+// Adds a player to the list of players that is connected to the server
+func (pNoRoom *PlayersConnected) AddPlayer(conn net.Conn, address string) {
 	pNoRoom.mutex.Lock()
 	defer pNoRoom.mutex.Unlock()
-	pNoRoom.players = append(pNoRoom.players, address)
+	pNoRoom.Players = append(pNoRoom.Players, PlayerConnectedConnection{
+		Address:    address,
+		Connection: conn,
+	})
 }
 
 // RemovePlayer

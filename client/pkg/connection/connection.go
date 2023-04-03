@@ -81,7 +81,7 @@ func (gameClient *GameClient) Connect() {
 
 		select {
 		case <-gameClient.ctx.Done():
-			errorCause := context.Cause(gameclient.Ctx)
+			errorCause := context.Cause(gameClient.ctx)
 			if err := errorCause; err != nil && !errors.Is(err, context.Canceled) {
 				panic(errorCause)
 			}

@@ -28,7 +28,7 @@ type GameServer struct {
 	handlers         *handlers.Handler
 	ctx              context.Context
 	cancleFunc       context.CancelCauseFunc
-	commsChan        chan string
+	commsChan        chan any
 }
 
 // CreateGameServer
@@ -51,19 +51,22 @@ func CreateGameServer(gameServerOptions GameServerOptions) *GameServer {
 		return nil
 	}
 
+	playersConnected := players.CreateConnectedPlayers()
+	message := message.InitMessage(message.MessageOptions{gameServerOptions.Logger, playersConnected})
+
 	gameServerOptions.Logger.Log(tcpAddress.String())
 
-	room := room.CreateRooms(2)
-	commsChan := make(chan string)
+	room := room.CreateRooms(2, message)
+	commsChan := make(chan any)
 
 	cancelCtx, cancelFunc := context.WithCancelCause(context.Background())
 
 	return &GameServer{
 		listener:         tcpListener,
 		logger:           gameServerOptions.Logger,
-		playersConnected: players.CreateConnectedPlayers(),
+		playersConnected: playersConnected,
 		rooms:            room.Rooms,
-		message:          message.InitMessage(message.MessageOptions{gameServerOptions.Logger}),
+		message:          message,
 		handlers: handlers.InitHandlers(handlers.HandlerOption{
 			Room:          *room,
 			CancelCtxFunc: cancelFunc,
@@ -89,12 +92,12 @@ func (gameServer *GameServer) Start() {
 		go func() {
 			c := make([]byte, 1000)
 
+			clientAddress := newUserConnection.RemoteAddr().String()
+
 			gameServer.logger.Log(fmt.Sprintf("%+v", newUserConnection))
 
-			gameServer.playersConnected.AddPlayer(newUserConnection.RemoteAddr().String())
+			gameServer.playersConnected.AddPlayer(newUserConnection, clientAddress)
 			gameServer.message.Unicast.SendRooms(newUserConnection, gameServer.rooms)
-
-			clientAddress := newUserConnection.RemoteAddr().String()
 
 			for {
 
@@ -112,6 +115,7 @@ func (gameServer *GameServer) Start() {
 					command,
 					payload,
 					clientAddress,
+					newUserConnection,
 				)
 
 				select {

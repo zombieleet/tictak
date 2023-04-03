@@ -2,10 +2,14 @@ package message
 
 import (
 	"github.com/zombieleet/tictak/server/pkg/logger"
+	"github.com/zombieleet/tictak/server/pkg/players"
 )
 
 type broadcast struct {
-	logger *logger.Logger
+	logger                       *logger.Logger
+	connectedPlayersForBroadcast []players.PlayerConnectedConnection
 }
 
-func (bcast *broadcast) NO_OP() {}
+func (bcast *broadcast) SendPlayerCountToConnectedPlayers() {
+	fmt.Println(bcast.connectedPlayersForBroadcast)
+}

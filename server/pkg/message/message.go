@@ -1,18 +1,21 @@
 package message
 
 import (
-	"encoding/json"
 	"github.com/zombieleet/tictak/client/pkg/message"
 	"github.com/zombieleet/tictak/server/pkg/logger"
+	"github.com/zombieleet/tictak/server/pkg/players"
+	"reflect"
 )
 
 type messageContext struct {
 	Type         string `json:"type"`
 	ContextValue string `json:"value"`
-	// will be use for broadcast
-	Dst string `json:"dst,omitempty"`
-	// will be use for broadcast
-	Src string `json:"src,omitempty"`
+	// it will be use for sending unicast messages
+	Dst string `json:"dst"`
+	// sender address
+	Src string `json:"src"`
+	// it will be use for sending broadcast messages
+	DstMultiple string `json:dst_multiple`
 }
 
 type Message struct {
@@ -22,12 +25,13 @@ type Message struct {
 }
 
 type MessageOptions struct {
-	Logger *logger.Logger
+	Logger                       *logger.Logger
+	connectedPlayersForBroadcast []players.PlayerConnectedConnection
 }
 
 func InitMessage(messageOptions MessageOptions) *Message {
 	return &Message{
-		Broadcast: &broadcast{messageOptions.Logger},
+		Broadcast: &broadcast{messageOptions.Logger, messageOptions.connectedPlayersForBroadcast},
 		Unicast:   &unicast{messageOptions.Logger},
 		m:         message.InitMessage(),
 	}
