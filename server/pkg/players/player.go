@@ -5,6 +5,7 @@ import (
 	"sync"
 )
 
+// PlayerInfo holds info about a connected player in a room
 type PlayerInfo struct {
 	Address      string `json:"addres"`
 	Name         string `json:"name"`
@@ -12,34 +13,34 @@ type PlayerInfo struct {
 	Connection   net.Conn
 }
 
-type Players struct {
+// PlayersInRoom maps playerone and playertwo to list of players in a room
+type PlayersInRoom struct {
 	PlayerOne *PlayerInfo `json:"player_one"`
 	PlayerTwo *PlayerInfo `json:"player_two"`
 }
 
+// PlayerConnectedConnection holds connection information for players in the game
 type PlayerConnectedConnection struct {
 	Address    string
 	Connection net.Conn
 }
 
-// PlayersConnected
-// a struct with private fields
-// representing connected players
-type PlayersConnected struct {
+// PlayersConnected holds list of players that are in the game (tcp client connections)
+type PlayerConnectedToGame struct {
 	// list of connected players (network address)
 	Players []PlayerConnectedConnection
 	mutex   sync.RWMutex
 }
 
-func CreateConnectedPlayers() *PlayersConnected {
-	return &PlayersConnected{
-		Players: make([]PlayerConnectedConnection, 1),
+func CreateConnectedPlayers() *PlayerConnectedToGame {
+	return &PlayerConnectedToGame{
+		Players: make([]PlayerConnectedConnection, 0),
 	}
 }
 
 // AddPlayer
 // Adds a player to the list of players that is connected to the server
-func (pNoRoom *PlayersConnected) AddPlayer(conn net.Conn, address string) {
+func (pNoRoom *PlayerConnectedToGame) AddPlayer(conn net.Conn, address string) {
 	pNoRoom.mutex.Lock()
 	defer pNoRoom.mutex.Unlock()
 	pNoRoom.Players = append(pNoRoom.Players, PlayerConnectedConnection{
@@ -51,4 +52,4 @@ func (pNoRoom *PlayersConnected) AddPlayer(conn net.Conn, address string) {
 // RemovePlayer
 // Removes a player from the list of players connected to the server
 // TODO: when the client uses `q` | EOL to disconnect from the servr, this method will be called
-func (pNoRoom *PlayersConnected) RemovePlayer() {}
+func (pNoRoom *PlayerConnectedToGame) RemovePlayer() {}

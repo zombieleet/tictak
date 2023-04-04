@@ -13,22 +13,24 @@ import (
 	"net"
 )
 
+// GameServerOptions server connection information
 type GameServerOptions struct {
 	HostName string
 	Port     uint32
 	Logger   *logger.Logger
 }
 
+// GameServer holds information needed for game operations
 type GameServer struct {
 	listener         *net.TCPListener
 	logger           *logger.Logger
-	rooms            *room.RoomMap
-	playersConnected *players.PlayersConnected
+	room             *room.Room
+	playersConnected *players.PlayerConnectedToGame
 	message          *message.Message
 	handlers         *handlers.Handler
 	ctx              context.Context
 	cancleFunc       context.CancelCauseFunc
-	commsChan        chan any
+	commsChan        chan string
 }
 
 // CreateGameServer
@@ -57,7 +59,7 @@ func CreateGameServer(gameServerOptions GameServerOptions) *GameServer {
 	gameServerOptions.Logger.Log(tcpAddress.String())
 
 	room := room.CreateRooms(2, message)
-	commsChan := make(chan any)
+	commsChan := make(chan string)
 
 	cancelCtx, cancelFunc := context.WithCancelCause(context.Background())
 
@@ -65,7 +67,7 @@ func CreateGameServer(gameServerOptions GameServerOptions) *GameServer {
 		listener:         tcpListener,
 		logger:           gameServerOptions.Logger,
 		playersConnected: playersConnected,
-		rooms:            room.Rooms,
+		room:             room,
 		message:          message,
 		handlers: handlers.InitHandlers(handlers.HandlerOption{
 			Room:          *room,
@@ -78,6 +80,7 @@ func CreateGameServer(gameServerOptions GameServerOptions) *GameServer {
 	}
 }
 
+// Start accepts connection request from every client
 func (gameServer *GameServer) Start() {
 
 	for {
@@ -97,7 +100,7 @@ func (gameServer *GameServer) Start() {
 			gameServer.logger.Log(fmt.Sprintf("%+v", newUserConnection))
 
 			gameServer.playersConnected.AddPlayer(newUserConnection, clientAddress)
-			gameServer.message.Unicast.SendRooms(newUserConnection, gameServer.rooms)
+			gameServer.room.SendRoomsInfo(newUserConnection, gameServer.cancleFunc)
 
 			for {
 

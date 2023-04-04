@@ -1,10 +1,10 @@
 package message
 
 import (
+	"encoding/json"
 	"github.com/zombieleet/tictak/client/pkg/message"
 	"github.com/zombieleet/tictak/server/pkg/logger"
 	"github.com/zombieleet/tictak/server/pkg/players"
-	"reflect"
 )
 
 type messageContext struct {
@@ -26,12 +26,12 @@ type Message struct {
 
 type MessageOptions struct {
 	Logger                       *logger.Logger
-	connectedPlayersForBroadcast []players.PlayerConnectedConnection
+	ConnectedPlayersForBroadcast *players.PlayerConnectedToGame
 }
 
 func InitMessage(messageOptions MessageOptions) *Message {
 	return &Message{
-		Broadcast: &broadcast{messageOptions.Logger, messageOptions.connectedPlayersForBroadcast},
+		Broadcast: &broadcast{messageOptions.Logger, messageOptions.ConnectedPlayersForBroadcast},
 		Unicast:   &unicast{messageOptions.Logger},
 		m:         message.InitMessage(),
 	}

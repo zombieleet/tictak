@@ -9,6 +9,7 @@ import (
 	"github.com/zombieleet/tictak/server/pkg/players"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -29,7 +30,7 @@ type RoomInfo struct {
 	GridSize uint8 `json:"grid_size"`
 
 	// players added to a room (max is 2)
-	Players *players.Players `json:"players_in_room"`
+	Players *players.PlayersInRoom `json:"players_in_room"`
 }
 
 type RoomMap map[uint8]*RoomInfo
@@ -75,7 +76,7 @@ func CreateRooms(roomCount uint8, message *message.Message) *Room {
 			grid:                  createGrid(3),
 			GridSize:              3,
 			Visibility:            "PUBLIC",
-			Players:               new(players.Players),
+			Players:               new(players.PlayersInRoom),
 			Name:                  fmt.Sprintf("%s %d", "Room", roomIndex),
 		}
 	}
@@ -86,7 +87,7 @@ func CreateRooms(roomCount uint8, message *message.Message) *Room {
 // EnterRoom registers a user in a room
 func (r *Room) EnterRoom(
 	_ net.Conn,
-	commsChan chan any,
+	commsChan chan string,
 	cancelCtxFunc context.CancelCauseFunc,
 	args ...interface{},
 ) {
@@ -117,10 +118,10 @@ func (r *Room) EnterRoom(
 		room.Occupied = true
 		room.NumberOfPlayersInRoom = 2
 
-		r.message.Unicast.SendPlayerOneConnectedInfoFromPlayerOne()
+		go r.message.Unicast.SendPlayerTwoConnectedInfoFromPlayerOne()
 
 	} else {
-		room.Players = &players.Players{
+		room.Players = &players.PlayersInRoom{
 			PlayerOne: &players.PlayerInfo{
 				Address:      address,
 				Name:         "",
@@ -131,9 +132,18 @@ func (r *Room) EnterRoom(
 	}
 
 	//commsChan <- *room
-	r.message.Broadcast.SendPlayerCountToConnectedPlayers()
+	go r.message.Broadcast.SendPlayerCountInRoomToConnectedPlayers(roomId, room.NumberOfPlayersInRoom)
 	//r.message.Broadcast.SendPlayerCountToConnectedPlayers(r.message.Broadcast, room.NumberOfPlayersInRoom)
 
 	// broadcast an update to all players connected in the list of room
 	// check the playerconnected struct
+}
+
+func (r *Room) SendRoomsInfo(conn net.Conn, cancelCtxFunc context.CancelCauseFunc) {
+	var payload strings.Builder
+
+	for roomId, roomInfo := range *r.Rooms {
+		payload.WriteString(fmt.Sprintf("%d. %s (Occupied=%t)_", roomId, roomInfo.Name, roomInfo.Occupied))
+	}
+	go r.message.Unicast.SendRoomsInfoToNewClient(conn, payload.String())
 }

@@ -76,7 +76,7 @@ func (gameClient *GameClient) Connect() {
 		}
 
 		command, payload := gameClient.message.ProcessMessage(data)
-
+		fmt.Println(command, payload)
 		go gameClient.handler.HandleUICommand(command, payload)
 
 		select {

@@ -35,7 +35,9 @@ func (room *Room) CreateRoomListUI(commsChan chan string, data string) {
 	room.ui.ContentLayout.AddItem(roomsGrid, 0, 0, 2, 1, 0, 0, true)
 }
 
-func (room *Room) UpdateRoomListUI(_ chan string, _ string) {}
+func (room *Room) UpdateRoomListUI(_ chan string, d string) {
+	fmt.Println(d)
+}
 
 func (room *Room) createRoomGrid() *tview.Grid {
 	return room.ui.createGrid([]int{1}).SetColumns(0)

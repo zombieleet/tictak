@@ -2,12 +2,9 @@ package message
 
 import (
 	"context"
-	"fmt"
-	"github.com/zombieleet/tictak/server/pkg/commands"
+	"github.com/zombieleet/tictak/server/pkg/command"
 	"github.com/zombieleet/tictak/server/pkg/logger"
-	"github.com/zombieleet/tictak/server/pkg/room"
 	"net"
-	"strings"
 )
 
 type Command string
@@ -23,13 +20,7 @@ type unicast struct {
 // SendRooms
 // Sends the list of rooms and their avaialability information to
 // a client
-func (ucast *unicast) SendRooms(conn net.Conn, rooms *room.RoomMap) {
-
-	var payload strings.Builder
-
-	for roomId, roomInfo := range *rooms {
-		payload.WriteString(fmt.Sprintf("%d. %s (Occupied=%t)_", roomId, roomInfo.Name, roomInfo.Occupied))
-	}
+func (ucast *unicast) SendRoomsInfoToNewClient(conn net.Conn, payload string) {
 
 	connAddress := conn.RemoteAddr().String()
 	parentCtx := context.Background()
@@ -50,7 +41,7 @@ func (ucast *unicast) SendRooms(conn net.Conn, rooms *room.RoomMap) {
 		[]any{"address", connAddress},
 	)
 
-	_, error := conn.Write([]byte(commands.Commands["CMD_SEND_ROOMS"] + payload.String() + "\n"))
+	_, error := conn.Write([]byte(command.Commands["CMD_SEND_ROOMS"] + payload + "\n"))
 
 	if error != nil {
 		ucast.logger.NetworkError(error)
@@ -64,3 +55,5 @@ func (ucast *unicast) SendRooms(conn net.Conn, rooms *room.RoomMap) {
 		[]any{"address", connAddress},
 	)
 }
+
+func (ucast *unicast) SendPlayerTwoConnectedInfoFromPlayerOne() {}

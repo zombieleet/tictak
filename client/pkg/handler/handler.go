@@ -39,7 +39,7 @@ func InitHandlers(handlerOption HandlerOption) *Handler {
 	}
 
 	handler.handlers["CMD_SEND_ROOMS"] = handler.ui.Room.CreateRoomListUI
-	handler.handlers["CMD_UPDATE_ROOMS"] = handler.ui.Room.UpdateRoomListUI
+	handler.handlers["CMD_SEND_ROOM_LIST_UPDATE_TO_CLIENTS"] = handler.ui.Room.UpdateRoomListUI
 
 	return handler
 }
